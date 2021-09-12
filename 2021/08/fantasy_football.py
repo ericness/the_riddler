@@ -1,9 +1,9 @@
+from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from enum import Enum
-from __future__ import annotations
 import operator
-from typing import Dict, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 
 class Position(Enum):
@@ -14,7 +14,7 @@ class Position(Enum):
     Wide_Receiver = 3
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class Athlete:
     """An athlete that can be chosen"""
 
@@ -34,7 +34,6 @@ ATHLETES = [
     Athlete("Defon Stiggs", 175, Position.Wide_Receiver),
 ]
 
-@dataclass
 class Player(Enum):
     """One of the games players"""
 
@@ -69,7 +68,7 @@ class GameState:
     """Specify the status of the game"""
 
     player_athletes: Dict[Player, Set[Athlete]]
-    descendent_states: Set[GameState]
+    descendent_states: List[GameState]
 
     def take_turn(self, turn_index: int) -> GameState:
         """Build out all possible descendent states"""
@@ -91,7 +90,7 @@ class GameState:
                 totals[player] = sum(map(operator.attrgetter('value'), self.player_athletes[player]))
             return max(totals.items(), key=operator.itemgetter(1))
         else:
-            results = {}
+            results = [] 
             for state in self.descendent_states:
-                results.add(state.determine_winner())
-            # return winner for current state 
+                results.append(state.determine_winner())
+            return max(results, key=operator.itemgetter(1)) 
