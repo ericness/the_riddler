@@ -2,6 +2,7 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from enum import Enum
+import itertools
 import operator
 from typing import Dict, List, Set, Tuple
 
@@ -22,6 +23,7 @@ class Athlete:
     value: int
     position: Position
 
+
 ATHLETES = [
     Athlete("Matrick Pahomes", 400, Position.Quarterback),
     Athlete("Osh Jallen", 350, Position.Quarterback),
@@ -34,12 +36,14 @@ ATHLETES = [
     Athlete("Defon Stiggs", 175, Position.Wide_Receiver),
 ]
 
+
 class Player(Enum):
     """One of the games players"""
 
     A = 1
     B = 2
     C = 3
+
 
 TURN_ORDER = [
     Player.A,
@@ -53,15 +57,6 @@ TURN_ORDER = [
     Player.C,
 ]
 
-# @dataclass
-# class PlayerAthletes:
-    # """Athletes a player has chosen"""
-# 
-    # quarterback: Optional[Athlete]
-    # running_back: Optional[Athlete]
-    # wide_receiver: Optional[Athlete]
-
-
 
 @dataclass
 class GameState:
@@ -70,16 +65,22 @@ class GameState:
     player_athletes: Dict[Player, Set[Athlete]]
     descendent_states: List[GameState]
 
-    def take_turn(self, turn_index: int) -> GameState:
+    def take_turn(
+        self, turn_order: List[Player], turn_index: int, athletes: List[Athlete]
+    ) -> GameState:
         """Build out all possible descendent states"""
-        player = TURN_ORDER[turn_index]
-        for athlete in ATHLETES:
-            if athlete in self.player_athletes[player]:
-                break
-            new_state = copy.deepcopy(self) 
-            new_state.player_athletes[player].quarterback = athlete
+        player = turn_order[turn_index]
+        for athlete in athletes:
+            if athlete in itertools.chain(self.player_athletes.values()):
+                continue
+            if athlete.position in map(
+                operator.attrgetter("position"), self.player_athletes[player]
+            ):
+                continue
+            new_state = copy.deepcopy(self)
+            new_state.player_athletes[player].add(athlete)
             self.descendent_states.add(new_state)
-            if new_turn_index := turn_index + 1 < len(TURN_ORDER):
+            if new_turn_index := turn_index + 1 < len(turn_order):
                 new_state.take_turn(new_turn_index)
 
     def determine_winner(self) -> Tuple[Player, int]:
@@ -87,10 +88,12 @@ class GameState:
         if not self.descendent_states:
             totals = {}
             for player in Player:
-                totals[player] = sum(map(operator.attrgetter('value'), self.player_athletes[player]))
+                totals[player] = sum(
+                    map(operator.attrgetter("value"), self.player_athletes[player])
+                )
             return max(totals.items(), key=operator.itemgetter(1))
         else:
-            results = [] 
+            results = []
             for state in self.descendent_states:
                 results.append(state.determine_winner())
-            return max(results, key=operator.itemgetter(1)) 
+            return max(results, key=operator.itemgetter(1))
