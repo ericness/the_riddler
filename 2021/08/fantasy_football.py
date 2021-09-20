@@ -7,12 +7,12 @@ import operator
 from typing import Dict, List, Set, Tuple
 
 
-class Position(Enum):
+class Position(str, Enum):
     """Position that an athlete plays"""
 
-    Quarterback = 1
-    Running_Back = 2
-    Wide_Receiver = 3
+    Quarterback: str = "Quarterback"
+    Running_Back: str = "Running Back"
+    Wide_Receiver: str = "Wide Receiver"
 
 
 @dataclass(eq=True, frozen=True)
@@ -37,12 +37,12 @@ ATHLETES = [
 ]
 
 
-class Player(Enum):
+class Player(str, Enum):
     """One of the games players"""
 
-    A = 1
-    B = 2
-    C = 3
+    A: str = "Player A"
+    B: str = "Player B"
+    C: str = "Player C"
 
 
 TURN_ORDER = [
@@ -71,17 +71,17 @@ class GameState:
         """Build out all possible descendent states"""
         player = turn_order[turn_index]
         for athlete in athletes:
-            if athlete in itertools.chain(self.player_athletes.values()):
+            if athlete in itertools.chain.from_iterable(self.player_athletes.values()):
                 continue
             if athlete.position in map(
                 operator.attrgetter("position"), self.player_athletes[player]
             ):
                 continue
-            new_state = copy.deepcopy(self)
+            new_state = GameState(copy.deepcopy(self.player_athletes), [])
             new_state.player_athletes[player].add(athlete)
-            self.descendent_states.add(new_state)
-            if new_turn_index := turn_index + 1 < len(turn_order):
-                new_state.take_turn(new_turn_index)
+            self.descendent_states.append(new_state)
+            if (new_turn_index := (turn_index + 1)) < len(turn_order):
+                new_state.take_turn(turn_order, new_turn_index, athletes)
 
     def determine_winner(self) -> Tuple[Player, int]:
         """Determine who would win in the current game state"""
@@ -97,3 +97,16 @@ class GameState:
             for state in self.descendent_states:
                 results.append(state.determine_winner())
             return max(results, key=operator.itemgetter(1))
+
+
+if __name__ == "__main__":
+    player_athletes_empty = {
+        Player.A: set(),
+        Player.B: set(),
+        Player.C: set(),
+    }
+
+    state = GameState(player_athletes_empty, [])
+    state.take_turn(TURN_ORDER, 0, ATHLETES)
+    winner = state.determine_winner()
+    print(winner)
